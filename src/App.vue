@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { reactive, Ref, ref, watch } from 'vue';
+import { computed, reactive, Ref, ref, watch } from 'vue';
 import ModeSelector from './components/ModeSelector.vue'
 import Footer from './components/Footer.vue'
-import { InputInst, NInput, NTable, NSpace, NButton } from 'naive-ui';
+import { InputInst, NInput, NTable, NSpace, NButton, NAlert } from 'naive-ui';
 import { UserCache, getUserCache, openDirDialog, nameUUIDFromString } from './rust';
 import { getMojangUUID } from './mojang';
-import { useAsyncState, UseAsyncStateReturn } from '@vueuse/core'
+import { useAsyncState, UseAsyncStateReturn, computedAsync } from '@vueuse/core'
 
 const mode = ref<'offline2online' | 'online2offline' | 'custom'>('offline2online');
 
@@ -50,6 +50,20 @@ watch(caches, (newVal) => {
   }
 })
 
+const errors = computedAsync(async () => {
+  let res: string[] = []
+  if (config.rootDir === '') {
+    res.push('服务端根目录不能为空')
+  } else {
+    try {
+      await getUserCache(config.rootDir)
+    } catch (err) {
+      res.push('在指定服务端根目录中找不到 usercache.json 文件')
+    }
+  }
+  return res
+}, [])
+
 </script>
 
 <template>
@@ -57,6 +71,11 @@ watch(caches, (newVal) => {
     <ModeSelector v-model="mode" />
     <div class="content">
       <n-space vertical>
+        <n-alert title="您需要修复以下错误，然后才能开始转换" type="error" v-if="errors.length !== 0">
+          <template v-for="err in errors">
+            <span style="display: block">- {{ err }}</span>
+          </template>
+        </n-alert>
         <div id="root-dir-selector" class="row space-between" style="align-items: center;">
           <span>服务端根目录</span>
           <n-input ref="rootDirInputRef" v-model:value="config.rootDir" type="text" placeholder="点击以选择服务端根目录文件夹"
@@ -109,7 +128,7 @@ watch(caches, (newVal) => {
             </tbody>
           </n-table>
         </div>
-        <n-button type="primary">
+        <n-button type="primary" :disabled="errors.length !== 0">
           开始转换
         </n-button>
       </n-space>
