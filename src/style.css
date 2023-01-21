@@ -14,13 +14,9 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
-  padding: 0 5vw;
-  padding-top: 5vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
+#app {
+  min-width: none;height: 100vh;
+  overflow-y: auto;
 }
 
 .row {
