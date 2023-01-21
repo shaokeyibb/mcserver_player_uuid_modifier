@@ -3,7 +3,7 @@ import { computedAsync } from '@vueuse/core';
 import { nameUUIDFromString } from '../rust';
 import { getMojangUUID } from '../mojang';
 import { computed, ref, watch } from 'vue';
-import { NTable, useLoadingBar } from 'naive-ui';
+import { NTable, NEmpty, useLoadingBar } from 'naive-ui';
 
 const props = defineProps<{
   mode: 'offline2online' | 'online2offline' | 'custom',
@@ -114,7 +114,7 @@ watch(infoEvaluating, (newVal) => {
         </tbody>
       </n-table>
       <div id="no-data" v-if="input.length === 0">
-        <span>无数据</span>
+        <n-empty description="无数据" />
       </div>
     </template>
   </div>
@@ -131,7 +131,6 @@ watch(infoEvaluating, (newVal) => {
   justify-content: center;
   align-items: center;
   background-color: #fff;
-  height: 30px;
-  width: calc(100%);
+  padding: 10px;
 }
 </style>
