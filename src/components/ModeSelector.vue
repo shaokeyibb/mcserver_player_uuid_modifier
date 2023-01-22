@@ -14,10 +14,10 @@ defineEmits<{
     <n-radio-group :value="modelValue" @update:value="newVal => $emit('update:modelValue', newVal)"
         style="margin-bottom: 12px" size="large">
         <n-radio-button value="offline2online">
-            正版 UUID -> 盗版 UUID
+            离线 UUID -> 正版 UUID
         </n-radio-button>
         <n-radio-button value="online2offline">
-            盗版 UUID -> 正版 UUID
+            正版 UUID -> 离线 UUID
         </n-radio-button>
         <n-radio-button value="custom" :disabled="true">
             自定义
