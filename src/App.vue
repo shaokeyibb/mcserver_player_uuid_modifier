@@ -88,7 +88,7 @@ async function handleStartConvert() {
     loadingBar.finish()
   } catch (err) {
     loadingBar.error()
-    notification['error'].create({
+    notification['error']({
       title: "在转换玩家数据时发生了一个错误",
       content: err as string
     })
