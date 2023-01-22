@@ -94,6 +94,10 @@ async function handleStartConvert() {
     })
   }
   running.value = false
+  notification['success']({
+    title: "转换完成",
+    content: "玩家数据转换完成"
+  })
 }
 
 </script>
