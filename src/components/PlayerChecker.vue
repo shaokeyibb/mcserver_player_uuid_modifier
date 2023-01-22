@@ -3,7 +3,7 @@ import { computedAsync } from '@vueuse/core';
 import { nameUUIDFromString } from '../rust';
 import { getMojangUUID } from '../mojang';
 import { computed, ref, watch } from 'vue';
-import { NTable, NEmpty, useLoadingBar } from 'naive-ui';
+import { NTable, NEmpty, useLoadingBar, createDiscreteApi } from 'naive-ui';
 
 const props = defineProps<{
   mode: 'offline2online' | 'online2offline' | 'custom',
@@ -62,7 +62,10 @@ watch(info, (newVal) => {
   emit('update:output', Object.fromEntries(newVal.filter(it => it.from != null && it.to != null).map(it => [it.from, it.to])));
 });
 
-const loadingBar = useLoadingBar()
+const { loadingBar } = createDiscreteApi(
+  ['loadingBar']
+)
+
 watch(infoEvaluating, (newVal) => {
   if (newVal) {
     loadingBar.start();

@@ -6,9 +6,11 @@ import Footer from './components/Footer.vue'
 import RootDirSelector from './components/RootDirSelector.vue';
 import PlayerChecker from './components/PlayerChecker.vue';
 import ConvertOptions from './components/ConvertOptions.vue';
-import { NSpace, NButton, NLoadingBarProvider } from 'naive-ui';
-import { getUserCache } from './rust';
+import { NSpace, NButton, NLoadingBarProvider, useLoadingBar, createDiscreteApi } from 'naive-ui';
+import { convert, getUserCache } from './rust';
 import { computedAsync } from '@vueuse/core'
+import { Config } from './data';
+import loading from 'naive-ui/es/_internal/loading';
 
 const mode = ref<'offline2online' | 'online2offline' | 'custom'>('offline2online');
 
@@ -33,11 +35,7 @@ const convertOptions = [
     disabled: true
   }]
 
-const config = reactive<{
-  rootDir: string,
-  convertOptions: string[],
-  uuids: Record<string, string>
-}>({
+const config = reactive<Config>({
   rootDir: '',
   convertOptions: [],
   uuids: {}
@@ -77,30 +75,46 @@ watch(rootDir, async (newVal) => {
   deep: true
 })
 
+const { loadingBar, notification } = createDiscreteApi(
+  ['loadingBar', 'notification']
+)
+
+const running = ref(false)
+
 async function handleStartConvert() {
-  
+  loadingBar.start()
+  running.value = true
+  try {
+    await convert(config)
+    loadingBar.finish()
+  } catch (err) {
+    loadingBar.error()
+    notification['error'].create({
+      title: "在转换玩家数据时发生了一个错误",
+      content: err as string
+    })
+  }
+  running.value = false
 }
 
 </script>
 
 <template>
-  <n-loading-bar-provider>
-    <div class="container">
-      <ModeSelector v-model="mode" />
-      <div class="content">
-        <n-space vertical>
-          <ErrorAlert :error="errors" />
-          <RootDirSelector v-model="config.rootDir" />
-          <PlayerChecker :mode="mode" v-model:input="input" v-model:output="config.uuids" />
-          <ConvertOptions v-model="config.convertOptions" :options="convertOptions" />
-          <n-button type="primary" :disabled="errors.length !== 0" @click="handleStartConvert">
-            开始转换
-          </n-button>
-        </n-space>
-      </div>
+  <div class="container">
+    <ModeSelector v-model="mode" />
+    <div class="content">
+      <n-space vertical>
+        <ErrorAlert :error="errors" />
+        <RootDirSelector v-model="config.rootDir" />
+        <PlayerChecker :mode="mode" v-model:input="input" v-model:output="config.uuids" />
+        <ConvertOptions v-model="config.convertOptions" :options="convertOptions" />
+        <n-button type="primary" :disabled="errors.length !== 0 || running" @click="handleStartConvert">
+          开始转换
+        </n-button>
+      </n-space>
     </div>
-    <Footer />
-  </n-loading-bar-provider>
+  </div>
+  <Footer />
 </template>
 
 <style scoped>

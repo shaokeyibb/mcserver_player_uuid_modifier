@@ -3,3 +3,9 @@ export type PlayerData = {
     mojangUUID: string
     offlineUUID: string
 }
+
+export type Config = {
+    rootDir: string,
+    convertOptions: string[],
+    uuids: Record<string, string>
+}

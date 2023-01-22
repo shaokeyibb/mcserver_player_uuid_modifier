@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/tauri'
+import { Config } from './data';
 
 export class UserCache {
   readonly name: string;
@@ -29,4 +30,8 @@ export async function nameUUIDFromString(name: string): Promise<string> {
 
 export async function fetch(url: string): Promise<string> {
   return await invoke<string>('fetch', { url });
+}
+
+export async function convert(config: Config): Promise<void> {
+  return await invoke<void>('convert', { config });
 }
