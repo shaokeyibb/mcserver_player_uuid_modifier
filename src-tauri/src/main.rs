@@ -39,29 +39,50 @@ struct Config {
 }
 
 #[tauri::command]
-fn convert(config: Config) -> Result<(), String> {
-    config
-        .convert_options
-        .iter()
-        .try_for_each(|it| match it.as_str() {
-            "world" => convert_world(&config.root_dir, &config.uuids),
-            "plugin" => convert_plugin(&config.root_dir, &config.uuids),
+fn convert(config: Config) -> Result<Vec<PathBuf>, String> {
+    let mut result = Vec::new();
+    for it in config.convert_options.iter() {
+        match it.as_str() {
+            "world" => {
+                convert_worlds(&config.root_dir, &config.uuids)
+                    .into_iter()
+                    .for_each(|it| {
+                        result.extend(it);
+                    });
+            }
+            "plugin_text" => {
+                convert_plugins(&config.root_dir, &config.uuids)
+                    .into_iter()
+                    .for_each(|it| {
+                        result.extend(it);
+                    });
+            }
             _ => return Err(format!("Unknown convert option: {}", it)),
-        })?;
-    Ok(())
+        }
+    }
+    Ok(result)
 }
 
-fn convert_world(root_dir: &str, entries: &HashMap<String, String>) -> Result<(), String> {
+fn convert_worlds(
+    root_dir: &str,
+    entries: &HashMap<String, String>,
+) -> Result<Vec<PathBuf>, String> {
     let worlds = scan_worlds(root_dir).map_err(|it| it.to_string())?;
-    worlds
+    let result = worlds
         .iter()
-        .try_for_each(|it| rename_all_files_in_dir(it, entries).map_err(|it| it.to_string()))?;
-    Ok(())
+        .map(|it| rename_all_files_in_dir(it, entries))
+        .filter(|it| it.is_ok())
+        .flat_map(|it| it.unwrap())
+        .collect();
+    Ok(result)
 }
 
-fn convert_plugin(root_dir: &str, entries: &HashMap<String, String>) -> Result<(), String> {
+fn convert_plugins(
+    root_dir: &str,
+    entries: &HashMap<String, String>,
+) -> Result<Vec<PathBuf>, String> {
     println!("{:?}", scan_plugins(root_dir));
-    Ok(())
+    Ok(Vec::new())
 }
 
 fn scan_worlds<P: AsRef<Path>>(path: P) -> io::Result<Vec<PathBuf>> {
@@ -93,12 +114,14 @@ fn scan_plugins<P: AsRef<Path>>(path: P) -> io::Result<Vec<PathBuf>> {
 fn rename_all_files_in_dir<P: AsRef<Path>>(
     dir: P,
     entries: &HashMap<String, String>,
-) -> io::Result<()> {
+) -> io::Result<Vec<PathBuf>> {
+    let mut result = Vec::new();
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir() {
-            rename_all_files_in_dir(&path, entries)?;
+            let rst = rename_all_files_in_dir(&path, entries)?;
+            result.extend(rst);
             continue;
         }
         if let Some(name) = path.file_name() {
@@ -109,11 +132,19 @@ fn rename_all_files_in_dir<P: AsRef<Path>>(
                 let new_path = path.with_file_name(
                     entries[from].clone() + &name.to_str().unwrap()[from.len()..].to_string(),
                 );
-                fs::rename(path, new_path)?;
+                fs::rename(path, &new_path)?;
+                result.push(new_path);
             } else {
                 continue;
             }
         }
     }
-    Ok(())
+    Ok(result)
+}
+
+fn rename_all_files_text_in_dir<P: AsRef<Path>>(
+    dir: P,
+    entries: &HashMap<String, String>,
+) -> io::Result<Vec<PathBuf>> {
+    Ok(Vec::new())
 }

@@ -69,7 +69,7 @@ const warnings = computed(() => {
 
   res.push("转换过程会覆盖原有的玩家数据文件，请确保服务器完全关闭并对服务器数据进行备份后再进行转换")
 
-  if (config.convertOptions.includes('plugin_text')){
+  if (config.convertOptions.includes('plugin_text')) {
     res.push("插件文本转换不一定 100% 准确")
   }
 
@@ -96,8 +96,22 @@ async function handleStartConvert() {
   loadingBar.start()
   running.value = true
   try {
-    await convert(config)
+    let result = await convert(config)
     loadingBar.finish()
+    if (result.length !== 0) {
+      notification['success']({
+        title: "转换完成",
+        content: "位于以下位置的玩家数据转换完成：\n" + result.join('\n'),
+        keepAliveOnHover: true,
+        duration: 10 * 1000
+      })
+    } else {
+      notification['warning']({
+        title: "转换完成",
+        content: "转换序列已正常结束，但没有玩家数据更改",
+        duration: 3 * 1000
+      })
+    }
   } catch (err) {
     loadingBar.error()
     notification['error']({
@@ -106,10 +120,6 @@ async function handleStartConvert() {
     })
   }
   running.value = false
-  notification['success']({
-    title: "转换完成",
-    content: "玩家数据转换完成"
-  })
 }
 
 </script>

@@ -32,6 +32,6 @@ export async function fetch(url: string): Promise<string> {
   return await invoke<string>('fetch', { url });
 }
 
-export async function convert(config: Config): Promise<void> {
-  return await invoke<void>('convert', { config });
+export async function convert(config: Config): Promise<string[]> {
+  return await invoke<string[]>('convert', { config });
 }
