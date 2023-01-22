@@ -64,6 +64,18 @@ const errors = computedAsync(async () => {
   return res
 }, [])
 
+const warnings = computed(() => {
+  let res: string[] = []
+
+  res.push("转换过程会覆盖原有的玩家数据文件，请确保服务器完全关闭并对服务器数据进行备份后再进行转换")
+
+  if (config.convertOptions.includes('plugin_text')){
+    res.push("插件文本转换不一定 100% 准确")
+  }
+
+  return res;
+})
+
 const input = reactive<string[]>([])
 
 watch(rootDir, async (newVal) => {
@@ -107,7 +119,7 @@ async function handleStartConvert() {
     <ModeSelector v-model="mode" />
     <div class="content">
       <n-space vertical>
-        <ErrorAlert :error="errors" />
+        <ErrorAlert :error="errors" :warning="warnings" />
         <RootDirSelector v-model="config.rootDir" />
         <PlayerChecker :mode="mode" v-model:input="input" v-model:output="config.uuids" />
         <ConvertOptions v-model="config.convertOptions" :options="convertOptions" />
