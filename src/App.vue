@@ -6,11 +6,10 @@ import Footer from './components/Footer.vue'
 import RootDirSelector from './components/RootDirSelector.vue';
 import PlayerChecker from './components/PlayerChecker.vue';
 import ConvertOptions from './components/ConvertOptions.vue';
-import { NSpace, NButton, NLoadingBarProvider, useLoadingBar, createDiscreteApi } from 'naive-ui';
+import { NSpace, NButton, createDiscreteApi } from 'naive-ui';
 import { convert, getUserCache } from './rust';
 import { computedAsync } from '@vueuse/core'
 import { Config } from './data';
-import loading from 'naive-ui/es/_internal/loading';
 
 const mode = ref<'offline2online' | 'online2offline' | 'custom'>('offline2online');
 
