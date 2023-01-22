@@ -30,7 +30,7 @@ const _info = computedAsync<ConvertData[]>(async () => {
     let mojangUUID: string | null = null;
     try { mojangUUID = await getMojangUUID(name) } catch { }
 
-    let offlineUUID = await nameUUIDFromString(name);
+    let offlineUUID = await nameUUIDFromString("OfflinePlayer:"+name);
 
     result.push({
       name: name,
