@@ -195,7 +195,7 @@ fn rename_all_text<P: AsRef<Path>>(
         }
         println!("Scanning text file: {:?}", path.clone());
         let read = fs::read_to_string(path.clone());
-        // Slient ignore read_to_string error to skip binary files rea
+        // Slient ignore read_to_string error to skip binary files read
         if read.is_err() {
             continue;
         }
