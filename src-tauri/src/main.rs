@@ -5,7 +5,7 @@
 
 use std::{
     collections::HashMap,
-    fs::{self, rename},
+    fs::{self},
     io,
     path::{Path, PathBuf},
 };
@@ -82,7 +82,17 @@ fn convert_plugins(
     entries: &HashMap<String, String>,
 ) -> Result<Vec<PathBuf>, String> {
     println!("{:?}", scan_plugins(root_dir));
-    Ok(Vec::new())
+    let plugins = scan_plugins(root_dir).map_err(|it| it.to_string())?;
+    let mut result = Vec::new();
+    for it in plugins.iter() {
+        let file = rename_all_files_in_dir(it, entries).map_err(|it| it.to_string())?;
+        let dir = rename_all_dir(it, entries).map_err(|it| it.to_string())?;
+        let text = rename_all_text(it, entries).map_err(|it| it.to_string())?;
+        result.extend(file);
+        result.extend(dir);
+        result.extend(text);
+    }
+    Ok(result)
 }
 
 fn scan_worlds<P: AsRef<Path>>(path: P) -> io::Result<Vec<PathBuf>> {
@@ -124,13 +134,13 @@ fn rename_all_files_in_dir<P: AsRef<Path>>(
             result.extend(rst);
             continue;
         }
-        if let Some(name) = path.file_name() {
-            if let Some(from) = entries
-                .keys()
-                .find(|k| name.to_str().unwrap().starts_with(*k))
-            {
+        if let Some(name) = path.file_stem() {
+            if let Some(from) = entries.keys().find(|k| name.to_str().unwrap_or("") == *k) {
                 let new_path = path.with_file_name(
-                    entries[from].clone() + &name.to_str().unwrap()[from.len()..].to_string(),
+                    entries[from].clone()
+                        + &path.extension().map_or(String::from(""), |it| {
+                            String::from(".") + it.to_str().unwrap()
+                        }),
                 );
                 fs::rename(path, &new_path)?;
                 result.push(new_path);
@@ -142,9 +152,63 @@ fn rename_all_files_in_dir<P: AsRef<Path>>(
     Ok(result)
 }
 
-fn rename_all_files_text_in_dir<P: AsRef<Path>>(
+fn rename_all_dir<P: AsRef<Path>>(
     dir: P,
     entries: &HashMap<String, String>,
 ) -> io::Result<Vec<PathBuf>> {
-    Ok(Vec::new())
+    let mut result = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        if let Some(name) = path.file_name() {
+            if let Some(from) = entries.keys().find(|k| name.to_str().unwrap_or("") == *k) {
+                let new_path = path.with_file_name(entries[from].clone());
+                fs::rename(path, &new_path)?;
+                result.push(new_path.clone());
+                let rst = rename_all_dir(new_path, entries)?;
+                result.extend(rst);
+            } else {
+                let rst = rename_all_dir(&path, entries)?;
+                result.extend(rst);
+                continue;
+            }
+        }
+    }
+    Ok(result)
+}
+
+fn rename_all_text<P: AsRef<Path>>(
+    dir: P,
+    entries: &HashMap<String, String>,
+) -> io::Result<Vec<PathBuf>> {
+    let mut result = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            let rst = rename_all_text(&path, entries)?;
+            result.extend(rst);
+            continue;
+        }
+        println!("Scanning text file: {:?}", path.clone());
+        let read = fs::read_to_string(path.clone());
+        // Slient ignore read_to_string error to skip binary files rea
+        if read.is_err() {
+            continue;
+        }
+        let mut read = read.unwrap();
+        if entries.keys().filter(|k| read.contains(*k)).count() == 0 {
+            continue;
+        }
+        entries
+            .clone()
+            .iter()
+            .for_each(|(k, v)| read = read.replace(k, &v));
+        fs::write(path.clone(), read)?;
+        result.push(path);
+    }
+    Ok(result)
 }
