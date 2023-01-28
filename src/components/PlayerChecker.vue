@@ -2,7 +2,7 @@
 import { computedAsync } from '@vueuse/core';
 import { nameUUIDFromString } from '../rust';
 import { getMojangUUID, getYggdrasilProfileUUID } from '../mojang';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { NTable, NEmpty, createDiscreteApi } from 'naive-ui';
 
 const props = defineProps<{
@@ -179,7 +179,12 @@ watch(usedInfo, (newVal) => {
               </template>
             </td>
 
-            <td>{{ mode === 'offline2online' ? "离线验证" : (useExternal ? "外置验证" : "正版验证") }}</td>
+            <template v-if="mode === 'offline2online' || mode === 'online2offline'">
+              <td>{{ mode === 'offline2online' ? "离线验证" : (useExternal ? "外置验证" : "正版验证") }}</td>
+            </template>
+            <template v-else>
+              <td>{{ mode === 'online2ygg' ? "正版验证" : "外置验证" }}</td>
+            </template>
 
             <td>{{ (i.from !== null && i.to !== null) ? "✅" : "❌" }}</td>
           </tr>
