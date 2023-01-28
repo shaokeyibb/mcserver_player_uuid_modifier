@@ -2,11 +2,11 @@
 import { computedAsync } from '@vueuse/core';
 import { nameUUIDFromString } from '../rust';
 import { getMojangUUID, getYggdrasilProfileUUID } from '../mojang';
-import { computed, ref, watch } from 'vue';
-import { NTable, NEmpty, useLoadingBar, createDiscreteApi } from 'naive-ui';
+import { computed, nextTick, ref, watch } from 'vue';
+import { NTable, NEmpty, createDiscreteApi } from 'naive-ui';
 
 const props = defineProps<{
-  mode: 'offline2online' | 'online2offline' | 'custom',
+  mode: 'offline2online' | 'online2offline' | 'online2ygg' | 'ygg2online' | 'custom',
   input: string[],
   output: Record<string, string>,
   useExternal: boolean,
@@ -32,9 +32,7 @@ const _info = computedAsync<ConvertData[]>(async () => {
     let mojangUUID: string | null = null;
 
     if (props.useExternal) {
-      try { mojangUUID = await getYggdrasilProfileUUID(props.externalYggdrasilLink, name) } catch (e) {
-        console.log(e)
-      }
+      try { mojangUUID = await getYggdrasilProfileUUID(props.externalYggdrasilLink, name) } catch { }
     } else {
       try { mojangUUID = await getMojangUUID(name) } catch { }
     }
@@ -50,7 +48,7 @@ const _info = computedAsync<ConvertData[]>(async () => {
 
   return result;
 }, [], infoEvaluating);
-const info = computed(() => {
+const info = computed<ConvertData[]>(() => {
   if (props.mode === 'offline2online') {
     return _info.value;
   }
@@ -67,21 +65,83 @@ const info = computed(() => {
   return []
 });
 
-watch(info, (newVal) => {
-  emit('update:output', Object.fromEntries(newVal.filter(it => it.from != null && it.to != null).map(it => [it.from, it.to])));
+const yggInfoEvaluating = ref(false);
+const _yggInfo = computedAsync<ConvertData[]>(async () => {
+  let result: ConvertData[] = []
+  for (let name of props.input) {
+
+    let onlineUUID: string | null = null;
+    let yggUUID: string | null = null;
+
+    try { onlineUUID = await getMojangUUID(name) } catch { }
+    try { yggUUID = await getYggdrasilProfileUUID(props.externalYggdrasilLink, name) } catch { }
+
+    result.push({
+      name: name,
+      from: onlineUUID,
+      to: yggUUID
+    });
+  }
+
+  return result;
+}, [], yggInfoEvaluating);
+const yggInfo = computed<ConvertData[]>(() => {
+  if (props.mode === 'online2ygg') {
+    return _yggInfo.value;
+  }
+
+  if (props.mode === 'ygg2online') {
+    return _yggInfo.value.map(it => ({
+      name: it.name,
+      from: it.to,
+      to: it.from
+    }));
+  }
+
+  // custom TODO
+  return []
 });
+
+function onUpdateOutput(value: ConvertData[]) {
+  emit('update:output', Object.fromEntries(value.filter(it => it.from != null && it.to != null).map(it => [it.from, it.to])));
+}
 
 const { loadingBar } = createDiscreteApi(
   ['loadingBar']
 )
 
-watch(infoEvaluating, (newVal) => {
+watch(infoEvaluating, () => {
+  onEvaluating('info', infoEvaluating.value);
+})
+watch(yggInfoEvaluating, () => {
+  onEvaluating('yggInfo', yggInfoEvaluating.value);
+})
+
+function onEvaluating(type: 'info' | 'yggInfo', newVal: boolean) {
   if (newVal) {
     loadingBar.start();
   } else {
     loadingBar.finish();
   }
-})
+}
+
+const usedInfo = computed<ConvertData[]>(() => {
+  if (props.mode === 'offline2online' || props.mode === 'online2offline') {
+    return info.value;
+  }
+
+  if (props.mode === 'online2ygg' || props.mode === 'ygg2online') {
+    return yggInfo.value;
+  }
+
+  // custom TODO
+  return []
+});
+
+watch(usedInfo, (newVal) => {
+  onUpdateOutput(newVal);
+});
+
 </script>
 
 <template>
@@ -98,7 +158,7 @@ watch(infoEvaluating, (newVal) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="i in info">
+          <tr v-for="i in usedInfo">
             <td>{{ i.name }}</td>
 
             <td>

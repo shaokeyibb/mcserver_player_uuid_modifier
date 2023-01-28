@@ -11,7 +11,7 @@ import { convert, getUserCache } from './rust';
 import { computedAsync } from '@vueuse/core'
 import { Config } from './data';
 
-const mode = ref<'offline2online' | 'online2offline' | 'custom'>('offline2online');
+const mode = ref<'offline2online' | 'online2offline' | 'online2ygg' | 'ygg2online' | 'custom'>('offline2online');
 
 const useExternal = ref(false);
 const externalYggdrasilLink = ref('https://littleskin.cn/api/yggdrasil');
@@ -117,13 +117,16 @@ async function handleStartConvert() {
   running.value = false
 }
 
-watch(rootDir, async (newVal) => {
+watch(rootDir, async () => {
   await onReload()
 }, {
   deep: true
 })
 
-watch(useExternal, async () => {
+watch(useExternal, async (newVal, oldValue) => {
+  if (!newVal && oldValue && (mode.value === 'online2ygg' || mode.value === 'ygg2online')) {
+    mode.value = 'offline2online'
+  }
   await onReload()
 })
 
