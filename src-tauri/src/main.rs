@@ -23,7 +23,8 @@ fn main() {
             file::open_dir_dialog,
             file::read_usercache,
             calc::name_uuid_from_bytes,
-            net::fetch
+            net::fetch,
+            net::fetch_post
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

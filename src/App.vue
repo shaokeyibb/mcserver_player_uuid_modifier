@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import ModeSelector from './components/ModeSelector.vue'
 import ErrorAlert from './components/ErrorAlert.vue';
 import Footer from './components/Footer.vue'
@@ -12,6 +12,9 @@ import { computedAsync } from '@vueuse/core'
 import { Config } from './data';
 
 const mode = ref<'offline2online' | 'online2offline' | 'custom'>('offline2online');
+
+const useExternal = ref(false);
+const externalYggdrasilLink = ref('https://littleskin.cn/api/yggdrasil');
 
 const convertOptions = [
   {
@@ -78,14 +81,6 @@ const warnings = computed(() => {
 
 const input = reactive<string[]>([])
 
-watch(rootDir, async (newVal) => {
-  input.splice(0, input.length)
-  let cache = await getUserCache(newVal)
-  input.push(...Array.from(new Set(cache.map(it => it.name))))
-}, {
-  deep: true
-})
-
 const { loadingBar, notification } = createDiscreteApi(
   ['loadingBar', 'notification']
 )
@@ -122,16 +117,40 @@ async function handleStartConvert() {
   running.value = false
 }
 
+watch(rootDir, async (newVal) => {
+  await onReload()
+}, {
+  deep: true
+})
+
+watch(useExternal, async () => {
+  await onReload()
+})
+
+watch(externalYggdrasilLink, async () => {
+  await onReload()
+})
+
+async function onReload() {
+  nextTick(async () => {
+    input.splice(0, input.length)
+    let cache = await getUserCache(rootDir.value)
+    input.push(...Array.from(new Set(cache.map(it => it.name))))
+  })
+}
+
 </script>
 
 <template>
   <div class="container">
-    <ModeSelector v-model="mode" />
     <div class="content">
       <n-space vertical>
+        <ModeSelector v-model="mode" v-model:use-external="useExternal"
+          v-model:external-yggdrasil-link="externalYggdrasilLink" />
         <ErrorAlert :error="errors" :warning="warnings" />
         <RootDirSelector v-model="config.rootDir" />
-        <PlayerChecker :mode="mode" v-model:input="input" v-model:output="config.uuids" />
+        <PlayerChecker :mode="mode" v-model:input="input" v-model:output="config.uuids" :use-external="useExternal"
+          :external-yggdrasil-link="externalYggdrasilLink" />
         <ConvertOptions v-model="config.convertOptions" :options="convertOptions" />
         <n-button type="primary" :disabled="errors.length !== 0 || running" @click="handleStartConvert">
           开始转换

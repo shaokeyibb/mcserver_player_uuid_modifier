@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computedAsync } from '@vueuse/core';
 import { nameUUIDFromString } from '../rust';
-import { getMojangUUID } from '../mojang';
+import { getMojangUUID, getYggdrasilProfileUUID } from '../mojang';
 import { computed, ref, watch } from 'vue';
 import { NTable, NEmpty, useLoadingBar, createDiscreteApi } from 'naive-ui';
 
 const props = defineProps<{
   mode: 'offline2online' | 'online2offline' | 'custom',
   input: string[],
-  output: Record<string, string>
+  output: Record<string, string>,
+  useExternal: boolean,
+  externalYggdrasilLink: string
 }>();
 
 const emit = defineEmits<{
@@ -28,9 +30,16 @@ const _info = computedAsync<ConvertData[]>(async () => {
   for (let name of props.input) {
 
     let mojangUUID: string | null = null;
-    try { mojangUUID = await getMojangUUID(name) } catch { }
 
-    let offlineUUID = await nameUUIDFromString("OfflinePlayer:"+name);
+    if (props.useExternal) {
+      try { mojangUUID = await getYggdrasilProfileUUID(props.externalYggdrasilLink, name) } catch (e) {
+        console.log(e)
+      }
+    } else {
+      try { mojangUUID = await getMojangUUID(name) } catch { }
+    }
+
+    let offlineUUID = await nameUUIDFromString("OfflinePlayer:" + name);
 
     result.push({
       name: name,
@@ -94,7 +103,7 @@ watch(infoEvaluating, (newVal) => {
 
             <td>
               <template v-if="i.from == null">
-                <span style="color: red">无法拉取正版账户信息</span>
+                <span style="color: red">无法拉取远程账户信息</span>
               </template>
               <template v-else>
                 {{ i.from }}
@@ -103,14 +112,14 @@ watch(infoEvaluating, (newVal) => {
 
             <td>
               <template v-if="i.to == null">
-                <span style="color: red">无法拉取正版账户信息</span>
+                <span style="color: red">无法拉取远程账户信息</span>
               </template>
               <template v-else>
                 {{ i.to }}
               </template>
             </td>
 
-            <td>{{ mode === 'offline2online' ? "离线" : "正版" }}</td>
+            <td>{{ mode === 'offline2online' ? "离线验证" : (useExternal ? "外置验证" : "正版验证") }}</td>
 
             <td>{{ (i.from !== null && i.to !== null) ? "✅" : "❌" }}</td>
           </tr>
