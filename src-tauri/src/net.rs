@@ -11,6 +11,7 @@ pub fn fetch_post(url: &str, body: String) -> Result<String, String> {
     let res = client
         .post(url)
         .body(body)
+        .header("Content-Type", "application/json")
         .send()
         .map_err(|err| err.to_string())?;
     res.text().map_err(|err| err.to_string())
